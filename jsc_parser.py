@@ -7,19 +7,21 @@
 """
 
 from construct import *
-from typedefs import JSVERSION, ScriptBits, XDRAtom
-
+from typedefs import JSVERSION, ScriptBits, XDRAtom, XDRScriptConst
 
 if __name__ == '__main__':
     jsc_bytecode = open("test/compile.js.jsc", "rb").read()
-    # jsc_bytecode = open(r"\\wsl.localhost\Ubuntu-20.04\home\mas0n\cocos2d-jsc-decompiler\js\src\build-linux\js\src\decjsc\test\compile2.js.jsc", "rb").read()
 
     st = Struct(
-        "spidermonkey version" / Hex(Int32ul),
+        "SpidermonkeyVersion" / Union(
+            0,
+            "magic" / Hex(Int32ul),
+            "version" / Computed(0xb973c0de - this.magic),
+        ),
         "numArgs" / Int16ul,
         "numBlockScoped" / Int16ul,
         "numVars" / Int32ul,
-        "length" / Int32ul,  # length of code vector
+        "length" / Int32ul * "length of code vector",
         "prologLength" / Int32ul,  # offset of main entry point from code, after predef'ing prolog
         "js version" / JSVERSION,  # Run-time version
         "natoms" / Int32ul,  # length of atoms array
@@ -36,7 +38,9 @@ if __name__ == '__main__':
         "sourceRetrievable_" / Int8ul,
         "sourceLength" / Int32ul,  # length_
         "compressedLength" / Int32ul,
-        "byteLen" / IfThenElse(this.compressedLength, Bytes(this.compressedLength), Bytes(this.sourceLength * 2 + 1)),
+        "argumentsNotIncluded" / Int8ul,
+        "Source" / IfThenElse(this.compressedLength, Bytes(this.compressedLength), Bytes(this.sourceLength * 2)),
+
 
         "hasSourceMapURL" / Int8ul,
         "sourceMapURLLen" / If(this.hasSourceMapURL, Int32ul),
@@ -57,7 +61,7 @@ if __name__ == '__main__':
         "code" / Bytes(this.length),
         "code + length" / Bytes(this.nsrcnotes),
         "atoms" / Array(this.natoms, XDRAtom),
-        # "vector" / Array(this.nconsts, XDRScriptConst)
+        "vector" / Array(this.nconsts, XDRScriptConst)
 
     )
 

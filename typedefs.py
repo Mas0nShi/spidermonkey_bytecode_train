@@ -89,64 +89,48 @@ XDRAtom = Struct(
     "nogc" / IfThenElse(this.lengthAndEncoding & 1, Bytes(this.lengthAndEncoding >> 1), Bytes((this.lengthAndEncoding >> 1) * 2))
 )
 
-DoublePun = Union(None,
-                  "d" / Double,
-                  "u" / Int64ul,
-                  )
+DoublePun = Union(
+    0,
+    "d" / Double,
+    "u" / Int64ul,
+)
 
 JSID_TYPE_STRING = 0x0
 JSID_TYPE_INT = 0x1
 
+# TODO: XDRObjectLiteral and XDRScriptConst refer to each other.
+XDRObjectLiteral = Struct(
+    "isArray" / Int32ul,
+    "length" / IfThenElse(this.isArray, Int32ul, AllocKind),
+    "capacity" / Int32ul,  # Number of allocated slots.
+    "initializedLength" / Int32ul,  # initialized: Number of initialized elements.
+    # "tmpValue" / XDRScriptConst,  # Recursively copy dense elements.
+    "nslot" / Int32ul,
+    "slot" / Array(this.nslot, Struct(
+        "idType" / Int32ul,
+        "id" / Switch(this.idType, {
+            JSID_TYPE_STRING: "atom" / XDRAtom,
+            JSID_TYPE_INT: "indexVal" / Int32ul,
+        }),
+        # "tmpValue" / XDRScriptConst,
+    ))
+)
 
-# XDRObjectLiteral = Struct(
-#     "isArray" / Int32ul,
-#     "length" / IfThenElse(this.isArray, Int32ul, AllocKind),
-#     "capacity" / Int32ul,  # Number of allocated slots.
-#     "initializedLength" / Int32ul,  # initialized: Number of initialized elements.
-#     "tmpValue" / this.XDRScriptConst,  # Recursively copy dense elements.
-#     "nslot" / Int32ul,
-#     "slot" / Array(this.nslot, Struct(
-#         "idType" / Int32ul,
-#         "id" / Switch(this.idType, {
-#             JSID_TYPE_STRING: "atom" / XDRAtom,
-#             JSID_TYPE_INT: "indexVal" / Int32ul,
-#         }),
-#         "tmpValue" / this.XDRScriptConst,
-#     ))
-# )
 
-
-#
-# XDRScriptConst = Struct(
-#     "tag" / ConstTag,
-#     "value" / Switch(
-#         this.tag,
-#         {
-#             "SCRIPT_INT": Int32ul,
-#             "SCRIPT_DOUBLE": DoublePun,
-#             "SCRIPT_ATOM": XDRAtom,
-#             "SCRIPT_TRUE": None,
-#             "SCRIPT_FALSE": None,
-#             "SCRIPT_NULL": None,
-#             "SCRIPT_OBJECT": Struct(
-#                 "isArray" / Int32ul,
-#                 "length" / IfThenElse(this.isArray, Int32ul, AllocKind),
-#                 "capacity" / Int32ul,  # Number of allocated slots.
-#                 "initializedLength" / Int32ul,  # initialized: Number of initialized elements.
-#                 "tmpValue" / XDRScriptConst,  # Recursively copy dense elements.
-#                 "nslot" / Int32ul,
-#                 "slot" / Array(this.nslot, Struct(
-#                     "idType" / Int32ul,
-#                     "id" / Switch(this.idType, {
-#                         JSID_TYPE_STRING: "atom" / XDRAtom,
-#                         JSID_TYPE_INT: "indexVal" / Int32ul,
-#                     }),
-#                     "tmpValue" / this.XDRScriptConst,
-#                 ))
-#             ),
-#             "SCRIPT_VOID": None,
-#             "SCRIPT_HOLE": None,
-#         }
-#     )
-#
-# )
+XDRScriptConst = Struct(
+    "tag" / ConstTag,
+    "value" / Switch(
+        this.tag,
+        {
+            "SCRIPT_INT": Int32ul,
+            "SCRIPT_DOUBLE": DoublePun,
+            "SCRIPT_ATOM": XDRAtom,
+            "SCRIPT_TRUE": None,
+            "SCRIPT_FALSE": None,
+            "SCRIPT_NULL": None,
+            "SCRIPT_OBJECT": XDRObjectLiteral,
+            "SCRIPT_VOID": None,
+            "SCRIPT_HOLE": None,
+        }
+    )
+)
