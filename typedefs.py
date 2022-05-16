@@ -61,32 +61,57 @@ AllocKind = Enum(
     FINALIZE_LAST=21
 )
 
+XDRClassKind = Enum(
+    Int32ul,
+    CK_BlockObject=0,
+    CK_WithObject=1,
+    CK_JSFunction=2,
+    CK_JSObject=3,
+)
+
 ScriptBits = BitStruct(
-    "NoScriptRval" / Bit,
-    "SavedCallerFun" / Bit,
-    "Strict" / Bit,
-    "ContainsDynamicNameAccess" / Bit,
-    "FunHasExtensibleScope" / Bit,
-    "FunNeedsDeclEnvObject" / Bit,
-    "FunHasAnyAliasedFormal" / Bit,
-    "ArgumentsHasVarBinding" / Bit,
-    "NeedsArgsObj" / Bit,
-    "IsGeneratorExp" / Bit,
-    "IsLegacyGenerator" / Bit,
-    "IsStarGenerator" / Bit,
-    "OwnSource" / Bit,
-    "ExplicitUseStrict" / Bit,
-    "SelfHosted" / Bit,
-    "IsCompileAndGo" / Bit,
-    "HasSingleton" / Bit,
-    "TreatAsRunOnce" / Bit,
-    "HasLazyScript" / Bit,
+    "NoScriptRval" / Flag,
+    "SavedCallerFun" / Flag,
+    "Strict" / Flag,
+    "ContainsDynamicNameAccess" / Flag,
+    "FunHasExtensibleScope" / Flag,
+    "FunNeedsDeclEnvObject" / Flag,
+    "FunHasAnyAliasedFormal" / Flag,
+    "ArgumentsHasVarBinding" / Flag,
+    "NeedsArgsObj" / Flag,
+    "IsGeneratorExp" / Flag,
+    "IsLegacyGenerator" / Flag,
+    "IsStarGenerator" / Flag,
+    "OwnSource" / Flag,
+    "ExplicitUseStrict" / Flag,
+    "SelfHosted" / Flag,
+    "IsCompileAndGo" / Flag,
+    "HasSingleton" / Flag,
+    "TreatAsRunOnce" / Flag,
+    "HasLazyScript" / Flag,
     Padding(13),  # 32 - 19
 )
 
 XDRAtom = Struct(
     "lengthAndEncoding" / Int32ul,
     "nogc" / IfThenElse(this.lengthAndEncoding & 1, Bytes(this.lengthAndEncoding >> 1), Bytes((this.lengthAndEncoding >> 1) * 2))
+)
+
+# TODO: not implemented.
+XDRStaticBlockObject = Struct(
+    "numVariables" / Int32ul,
+    "localOffset" / Int32ul,
+    "shapes" / Array(this.numVariables, Struct("atom" / XDRAtom, "isAliased" / Int32ul))
+)
+
+XDRStaticWithObject = None
+
+FirstWordFlag = Enum(
+    Int32ul,
+    HasAtom=0x1,
+    IsStarGenerator=0x2,
+    IsLazy=0x4,
+    HasSingletonType=0x8
 )
 
 DoublePun = Union(
@@ -98,6 +123,18 @@ DoublePun = Union(
 JSID_TYPE_STRING = 0x0
 JSID_TYPE_INT = 0x1
 
+
+# TODO: not implemented.
+XDRLazyScript = Struct()
+XDRScript = Struct()
+XDRInterpretedFunction = Struct(
+    "firstword" / Int32ul,
+    "Atom" / If(this.firstword & FirstWordFlag.HasAtom, XDRAtom),
+    "flagsword" / Int32ul,
+    "Script" / IfThenElse(this.firstword & FirstWordFlag.IsLazy, XDRLazyScript, XDRScript),
+)
+
+# TODO: not implemented.
 # TODO: XDRObjectLiteral and XDRScriptConst refer to each other.
 XDRObjectLiteral = Struct(
     "isArray" / Int32ul,
@@ -115,22 +152,21 @@ XDRObjectLiteral = Struct(
         # "tmpValue" / XDRScriptConst,
     ))
 )
-
-
+# TODO: not implemented.
 XDRScriptConst = Struct(
     "tag" / ConstTag,
     "value" / Switch(
         this.tag,
         {
-            "SCRIPT_INT": Int32ul,
-            "SCRIPT_DOUBLE": DoublePun,
-            "SCRIPT_ATOM": XDRAtom,
-            "SCRIPT_TRUE": None,
-            "SCRIPT_FALSE": None,
-            "SCRIPT_NULL": None,
-            "SCRIPT_OBJECT": XDRObjectLiteral,
-            "SCRIPT_VOID": None,
-            "SCRIPT_HOLE": None,
+            ConstTag.SCRIPT_INT: Int32ul,
+            ConstTag.SCRIPT_DOUBLE: DoublePun,
+            ConstTag.SCRIPT_ATOM: XDRAtom,
+            ConstTag.SCRIPT_TRUE: None,
+            ConstTag.SCRIPT_FALSE: None,
+            ConstTag.SCRIPT_NULL: None,
+            ConstTag.SCRIPT_OBJECT: XDRObjectLiteral,
+            ConstTag.SCRIPT_VOID: None,
+            ConstTag.SCRIPT_HOLE: None,
         }
     )
 )
