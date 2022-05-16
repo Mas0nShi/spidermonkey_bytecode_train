@@ -12,6 +12,7 @@ from typedefs import JSVERSION, ScriptBits, XDRAtom
 
 if __name__ == '__main__':
     jsc_bytecode = open("test/compile.js.jsc", "rb").read()
+    # jsc_bytecode = open(r"\\wsl.localhost\Ubuntu-20.04\home\mas0n\cocos2d-jsc-decompiler\js\src\build-linux\js\src\decjsc\test\compile2.js.jsc", "rb").read()
 
     st = Struct(
         "spidermonkey version" / Hex(Int32ul),
@@ -35,7 +36,7 @@ if __name__ == '__main__':
         "sourceRetrievable_" / Int8ul,
         "sourceLength" / Int32ul,  # length_
         "compressedLength" / Int32ul,
-        "byteLen" / IfThenElse(this.compressedLength, Bytes(this.compressedLength), Bytes(this.sourceLength * 2)),
+        "byteLen" / IfThenElse(this.compressedLength, Bytes(this.compressedLength), Bytes(this.sourceLength * 2 + 1)),
 
         "hasSourceMapURL" / Int8ul,
         "sourceMapURLLen" / If(this.hasSourceMapURL, Int32ul),
@@ -50,12 +51,11 @@ if __name__ == '__main__':
         "sourceStart_" / Int32ul,
         "sourceEnd_" / Int32ul,
         "lineno" / Int32ul,
-        "lineno" / Int32ul,
         "column" / Int32ul,
         "nslots" / Int32ul,
         "staticLevel" / Int32ul,
-        "code" / Bytes(this.length + 1),
-        "code + length" / Bytes(this.nsrcnotes + 1),
+        "code" / Bytes(this.length),
+        "code + length" / Bytes(this.nsrcnotes),
         "atoms" / Array(this.natoms, XDRAtom),
         # "vector" / Array(this.nconsts, XDRScriptConst)
 
